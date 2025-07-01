@@ -63,7 +63,7 @@ The app will open in your browser at `http://localhost:8501`
 
 - **Backend:** Pure Python with scikit-learn, pandas, numpy
 - **Frontend:** Streamlit for interactive web interface
-- **Models:** Real ML models trained on e-commerce data
+- **Models:** ML models trained on e-commerce data
 - **Output:** JSON format for easy API integration
 - **Performance:** Optimized for production use
 
