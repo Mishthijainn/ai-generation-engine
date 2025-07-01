@@ -22,7 +22,9 @@ le_gender = joblib.load('gender_encoder.pkl')
 le_income = joblib.load('income_encoder.pkl')
 le_device = joblib.load('device_encoder.pkl')
 scaler = joblib.load('user_scaler.pkl')
-kmeans = joblib.load('collaborative_filtering_model.pkl')
+# kmeans = joblib.load('collaborative_filtering_model.pkl')
+kmeans = joblib.load('user_segmentation_model.pkl')
+
 segment_names = joblib.load('user_segmentation_model.pkl')
 # Create user-item matrix
 user_item_matrix = interactions_df.pivot_table(
@@ -143,119 +145,119 @@ class PersonalizationEngine:
 
         return segment_prefs
 
-    def get_user_recommendations(self, user_id, n_recommendations=5):
-        recommendations = {
-            'user_id': user_id,
-            'recommendations': [],
-            'algorithm_used': [],
-            'confidence_score': 0.0
-        }
+    # def get_user_recommendations(self, user_id, n_recommendations=5):
+    #     recommendations = {
+    #         'user_id': user_id,
+    #         'recommendations': [],
+    #         'algorithm_used': [],
+    #         'confidence_score': 0.0
+    #     }
 
-        if user_id in self.users_df['user_id'].values:
-            user_idx = list(self.user_item_matrix.index).index(user_id)
-            similar_users = np.argsort(
-                self.user_similarity[user_idx])[::-1][1:6]
+    #     if user_id in self.users_df['user_id'].values:
+    #         user_idx = list(self.user_item_matrix.index).index(user_id)
+    #         similar_users = np.argsort(
+    #             self.user_similarity[user_idx])[::-1][1:6]
 
-            recommended_products = []
-            for similar_user_idx in similar_users:
-                similar_user_id = self.user_item_matrix.index[similar_user_idx]
-                user_products = self.interactions_df[self.interactions_df['user_id']
-                                                     == similar_user_id]['product_id'].values
-                recommended_products.extend(user_products)
+    #         recommended_products = []
+    #         for similar_user_idx in similar_users:
+    #             similar_user_id = self.user_item_matrix.index[similar_user_idx]
+    #             user_products = self.interactions_df[self.interactions_df['user_id']
+    #                                                  == similar_user_id]['product_id'].values
+    #             recommended_products.extend(user_products)
 
-            user_interacted_products = self.interactions_df[self.interactions_df['user_id']
-                                                            == user_id]['product_id'].values
-            recommended_products = list(
-                set(recommended_products) - set(user_interacted_products))
+    #         user_interacted_products = self.interactions_df[self.interactions_df['user_id']
+    #                                                         == user_id]['product_id'].values
+    #         recommended_products = list(
+    #             set(recommended_products) - set(user_interacted_products))
 
-            if len(recommended_products) >= n_recommendations:
-                final_recommendations = recommended_products[:n_recommendations]
-                recommendations['algorithm_used'].append(
-                    'collaborative_filtering')
-                recommendations['confidence_score'] = 0.8
-            else:
-                final_recommendations = recommended_products
-                recommendations['algorithm_used'].append(
-                    'collaborative_filtering_partial')
-                recommendations['confidence_score'] = 0.6
-        else:
-            final_recommendations = []
-            recommendations['confidence_score'] = 0.3
+    #         if len(recommended_products) >= n_recommendations:
+    #             final_recommendations = recommended_products[:n_recommendations]
+    #             recommendations['algorithm_used'].append(
+    #                 'collaborative_filtering')
+    #             recommendations['confidence_score'] = 0.8
+    #         else:
+    #             final_recommendations = recommended_products
+    #             recommendations['algorithm_used'].append(
+    #                 'collaborative_filtering_partial')
+    #             recommendations['confidence_score'] = 0.6
+    #     else:
+    #         final_recommendations = []
+    #         recommendations['confidence_score'] = 0.3
 
-        if len(final_recommendations) < n_recommendations:
-            user_info = self.users_df[self.users_df['user_id'] == user_id]
-            if not user_info.empty:
-                user_segment = user_info['segment_name'].iloc[0]
-                segment_products = self.segment_preferences.get(
-                    user_segment, {}).get('popular_products', [])
-            else:
-                segment_products = self.interactions_df.groupby('product_id')['rating'].mean(
-                ).sort_values(ascending=False).head(10).index.tolist()
+    #     if len(final_recommendations) < n_recommendations:
+    #         user_info = self.users_df[self.users_df['user_id'] == user_id]
+    #         if not user_info.empty:
+    #             user_segment = user_info['segment_name'].iloc[0]
+    #             segment_products = self.segment_preferences.get(
+    #                 user_segment, {}).get('popular_products', [])
+    #         else:
+    #             segment_products = self.interactions_df.groupby('product_id')['rating'].mean(
+    #             ).sort_values(ascending=False).head(10).index.tolist()
 
-            remaining_slots = n_recommendations - len(final_recommendations)
-            segment_recs = [
-                p for p in segment_products if p not in final_recommendations][:remaining_slots]
-            final_recommendations.extend(segment_recs)
-            recommendations['algorithm_used'].append('demographic_fallback')
+    #         remaining_slots = n_recommendations - len(final_recommendations)
+    #         segment_recs = [
+    #             p for p in segment_products if p not in final_recommendations][:remaining_slots]
+    #         final_recommendations.extend(segment_recs)
+    #         recommendations['algorithm_used'].append('demographic_fallback')
 
-        for product_id in final_recommendations:
-            product_info = self.products_df[self.products_df['product_id'] == product_id]
-            if not product_info.empty:
-                product_details = product_info.iloc[0]
-                recommendations['recommendations'].append({
-                    'product_id': product_id,
-                    'category': product_details['category'],
-                    'brand': product_details['brand'],
-                    'price': product_details['price'],
-                    'rating': product_details['rating']
-                })
+    #     for product_id in final_recommendations:
+    #         product_info = self.products_df[self.products_df['product_id'] == product_id]
+    #         if not product_info.empty:
+    #             product_details = product_info.iloc[0]
+    #             recommendations['recommendations'].append({
+    #                 'product_id': product_id,
+    #                 'category': product_details['category'],
+    #                 'brand': product_details['brand'],
+    #                 'price': product_details['price'],
+    #                 'rating': product_details['rating']
+    #             })
 
-        return recommendations
+    #     return recommendations
 
-    def handle_cold_start(self, user_demographics):
-        age = user_demographics.get('age', 30)
-        gender = user_demographics.get('gender', 'M')
-        income = user_demographics.get('income_group', 'Medium')
-        device = user_demographics.get('device_type', 'Mobile')
+    # def handle_cold_start(self, user_demographics):
+    #     age = user_demographics.get('age', 30)
+    #     gender = user_demographics.get('gender', 'M')
+    #     income = user_demographics.get('income_group', 'Medium')
+    #     device = user_demographics.get('device_type', 'Mobile')
 
-        temp_user_features = np.array([[
-            age,
-            self.le_gender.transform(
-                [gender])[0] if gender in self.le_gender.classes_ else 0,
-            0,
-            self.le_income.transform(
-                [income])[0] if income in self.le_income.classes_ else 1,
-            self.le_device.transform(
-                [device])[0] if device in self.le_device.classes_ else 0
-        ]])
+    #     temp_user_features = np.array([[
+    #         age,
+    #         self.le_gender.transform(
+    #             [gender])[0] if gender in self.le_gender.classes_ else 0,
+    #         0,
+    #         self.le_income.transform(
+    #             [income])[0] if income in self.le_income.classes_ else 1,
+    #         self.le_device.transform(
+    #             [device])[0] if device in self.le_device.classes_ else 0
+    #     ]])
 
-        temp_user_scaled = self.scaler.transform(temp_user_features)
-        predicted_segment = self.kmeans.predict(temp_user_scaled)[0]
-        segment_name = self.segment_names[predicted_segment]
-        segment_products = self.segment_preferences.get(
-            segment_name, {}).get('popular_products', [])
+    #     temp_user_scaled = self.scaler.transform(temp_user_features)
+    #     predicted_segment = self.kmeans.predict(temp_user_scaled)[0]
+    #     segment_name = self.segment_names[predicted_segment]
+    #     segment_products = self.segment_preferences.get(
+    #         segment_name, {}).get('popular_products', [])
 
-        recommendations = {
-            'user_id': 'new_user',
-            'predicted_segment': segment_name,
-            'recommendations': [],
-            'algorithm_used': ['cold_start_demographic'],
-            'confidence_score': 0.5
-        }
+    #     recommendations = {
+    #         'user_id': 'new_user',
+    #         'predicted_segment': segment_name,
+    #         'recommendations': [],
+    #         'algorithm_used': ['cold_start_demographic'],
+    #         'confidence_score': 0.5
+    #     }
 
-        for product_id in segment_products[:5]:
-            product_info = self.products_df[self.products_df['product_id'] == product_id]
-            if not product_info.empty:
-                product_details = product_info.iloc[0]
-                recommendations['recommendations'].append({
-                    'product_id': product_id,
-                    'category': product_details['category'],
-                    'brand': product_details['brand'],
-                    'price': product_details['price'],
-                    'rating': product_details['rating']
-                })
+    #     for product_id in segment_products[:5]:
+    #         product_info = self.products_df[self.products_df['product_id'] == product_id]
+    #         if not product_info.empty:
+    #             product_details = product_info.iloc[0]
+    #             recommendations['recommendations'].append({
+    #                 'product_id': product_id,
+    #                 'category': product_details['category'],
+    #                 'brand': product_details['brand'],
+    #                 'price': product_details['price'],
+    #                 'rating': product_details['rating']
+    #             })
 
-        return recommendations
+    #     return recommendations
 
     # def __init__(self):
     #     self.users_df = users_df
@@ -267,31 +269,31 @@ class PersonalizationEngine:
     #     self.product_similarity = product_similarity
     #     self.segment_preferences = self._build_segment_preferences()
 
-    def _build_segment_preferences(self):
-        """Build preferences for each user segment"""
-        segment_prefs = {}
+    # def _build_segment_preferences(self):
+    #     """Build preferences for each user segment"""
+    #     segment_prefs = {}
 
-        for segment in users_df['segment_name'].unique():
-            segment_users = users_df[users_df['segment_name']
-                                     == segment]['user_id'].values
-            segment_interactions = interactions_df[interactions_df['user_id'].isin(
-                segment_users)]
+    #     for segment in users_df['segment_name'].unique():
+    #         segment_users = users_df[users_df['segment_name']
+    #                                  == segment]['user_id'].values
+    #         segment_interactions = interactions_df[interactions_df['user_id'].isin(
+    #             segment_users)]
 
-            # Get popular products for this segment
-            popular_products = segment_interactions.groupby(
-                'product_id')['rating'].agg(['mean', 'count']).reset_index()
-            # Filter for reliability
-            popular_products = popular_products[popular_products['count'] >= 3]
-            popular_products = popular_products.sort_values(
-                ['mean', 'count'], ascending=[False, False])
+    #         # Get popular products for this segment
+    #         popular_products = segment_interactions.groupby(
+    #             'product_id')['rating'].agg(['mean', 'count']).reset_index()
+    #         # Filter for reliability
+    #         popular_products = popular_products[popular_products['count'] >= 3]
+    #         popular_products = popular_products.sort_values(
+    #             ['mean', 'count'], ascending=[False, False])
 
-            segment_prefs[segment] = {
-                'popular_products': popular_products['product_id'].head(10).tolist(),
-                'avg_rating': popular_products['mean'].mean(),
-                'total_interactions': len(segment_interactions)
-            }
+    #         segment_prefs[segment] = {
+    #             'popular_products': popular_products['product_id'].head(10).tolist(),
+    #             'avg_rating': popular_products['mean'].mean(),
+    #             'total_interactions': len(segment_interactions)
+    #         }
 
-        return segment_prefs
+    #     return segment_prefs
 
     def get_user_recommendations(self, user_id, n_recommendations=5):
         """Get personalized recommendations for a user"""
